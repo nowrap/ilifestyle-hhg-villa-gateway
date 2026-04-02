@@ -1,10 +1,10 @@
 # ilifestyle-hhg-villa-gateway
 
-Unofficial ioBroker integration for the **HHG Villa GW AV-Link Gateway (AVL20P)** via iLifestyle Cloud MQTT.
+Unofficial ioBroker integration for the **HHG Villa GW AV-Link Gateway** via iLifestyle Cloud MQTT.
 
-Tested with: HHG Villa GW AV-Link Gateway, Firmware 4.1.5
+Tested with: HHG Villa GW (VILLA GW), AV-Link Firmware 4.1.5
 
-> 📝 **Note:** The existing [hass-ilifestyle](https://github.com/timniklas/hass-ilifestyle) integration targets the HHG Villa GW M (AV-Link 4.0.2). This project targets the larger **HHG Villa GW AV-Link Gateway (AVL20P)** which uses a different firmware and HTTP API.
+> 📝 **Note:** The existing [hass-ilifestyle](https://github.com/timniklas/hass-ilifestyle) integration targets the HHG Villa GW M (AV-Link 4.0.2). This project targets the **HHG Villa GW AV-Link Gateway** which uses a different firmware version and HTTP API. Both devices share the same AVL20P platform.
 
 ---
 
@@ -21,20 +21,42 @@ Tested with: HHG Villa GW AV-Link Gateway, Firmware 4.1.5
 
 ## Hardware
 
-| Product | Internal model | Firmware |
-|---------|---------------|---------|
-| HHG Villa GW AV-Link Gateway | AVL20P | 4.1.x |
-| HHG Villa GW M *(not this project)* | AV-Link | 4.0.x |
+Both gateways run **AV-Link** firmware and share the same iLifestyle Cloud and MQTT protocol but differ in form factor and features.
+
+| | **Villa GW** *(this project)* | **Villa GW M** |
+|---|---|---|
+| Product | HHG Villa GW AV-Link Gateway | HHG Villa GW M Smarthome-WLAN-Gateway |
+| HHG Article | VILLA GW | VILLA GW M |
+| Firmware | AV-Link 4.1.x | AV-Link 4.0.x |
+| Form factor | DIN rail device (4 TE) | Flat, mounts behind monitor |
+| Connections | Villa bus, RJ45, WiFi antenna, 2x relay, LED status | Villa bus, optional 12V supply |
+| Features | Relay outputs (e.g. light switching via app) | Retrofit for Villa M indoor station |
+| WiFi | 802.11 b/g/n, 2.4 GHz, 150 Mbps, WPA2 | 2.4 GHz |
+
+### Device identification
+
+The device reports different model names depending on the source, which can be confusing:
+
+| Source | Name | Model / Type |
+|--------|------|-------------|
+| Web GUI (login page) | — | AVL20P |
+| Web GUI (device summary) | — | Device type: AVL20P |
+| iLifestyle App | Villa GW V3.0 | — |
+| iLifestyle App (details) | AV-LINK | AVL10 |
+| Firmware log | — | AV-LINK |
+
+**AVL20P** appears to be the product/device type, while **AVL10** (shown in the app hardware details) may refer to the underlying SoC or board revision. The app identifies the device as **Villa GW V3.0**.
+
 
 ---
 
 ## How it works
 
-The AVL20P connects to the iLifestyle Cloud MQTT broker. Credentials are fetched dynamically from the gateway's local HTTP API — no hardcoded tokens required. When someone rings the doorbell, an MQTT message is published on the device's topic.
+The gateway connects to the iLifestyle Cloud MQTT broker. Credentials are fetched dynamically from the gateway's local HTTP API — no hardcoded tokens required. When someone rings the doorbell, an MQTT message is published on the device's topic.
 
 ```
 Doorbell press
-    → AVL20P publishes MQTT event to iLifestyle Cloud
+    → Gateway publishes MQTT event to iLifestyle Cloud
         → ioBroker script receives event
             → sets ilifestyle.doorbell = true
                 → trigger your automations (push notification, lights, etc.)
