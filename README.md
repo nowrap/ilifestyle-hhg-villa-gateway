@@ -43,9 +43,18 @@ The device reports different model names depending on the source, which can be c
 | Web GUI (device summary) | — | Device type: AVL20P |
 | iLifestyle App | Villa GW V3.0 | — |
 | iLifestyle App (details) | AV-LINK | AVL10 |
-| Firmware log | — | AV-LINK |
+| SQLite DB (`config.device`) | — | `"type": "AVL10"` |
+| Cloud JWT (`dmd` claim) | — | AVL20P |
+| Firmware (`config.lua`) | AV-LINK | — (hardcoded in JWT grant) |
+| Kernel (`/proc/cpuinfo`) | SStar Soc | — |
+| Board info (`version_info`) | — | C410-NT98517-XX |
 
-**AVL20P** appears to be the product/device type, while **AVL10** (shown in the app hardware details) may refer to the underlying SoC or board revision. The app identifies the device as **Villa GW V3.0**.
+- **AVL10** = internal device type (stored in DB, shown in app details)
+- **AVL20P** = product/cloud identifier (shown in web GUI, used in cloud JWT)
+- **AV-LINK** = firmware family name (hardcoded in `config.lua` as JWT model grant)
+- **Villa GW V3.0** = app display name
+- **SoC**: SigmaStar (SStar), Dual-Core ARM Cortex-A7 @ 800 MHz
+- **Board**: C410-NT98517-XX
 
 
 ---
