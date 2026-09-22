@@ -1,5 +1,10 @@
 .env
 **/.env
+compose.yaml
+deploy/baresip/config/accounts
+deploy/baresip/config/config
+deploy/mosquitto/config/acl
+deploy/mosquitto/config/mosquitto.conf
 **/secrets/
 **/runtime/
 node_modules/

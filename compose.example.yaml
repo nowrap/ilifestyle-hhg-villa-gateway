@@ -1,0 +1,46 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - ./deploy/mosquitto/config:/mosquitto/config:ro
+      - ./deploy/mosquitto/secrets:/mosquitto/secrets:ro
+      - mosquitto-data:/mosquitto/data
+
+  waha:
+    image: devlikeapro/waha:latest
+    restart: unless-stopped
+    environment:
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WHATSAPP_HOOK_URL: http://host.docker.internal:3003/waha
+      WHATSAPP_HOOK_EVENTS: message,message.reaction
+      WHATSAPP_HOOK_CUSTOM_HEADERS: X-Ilifestyle-Secret:${WAHA_WEBHOOK_SECRET}
+    ports:
+      - "127.0.0.1:3002:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - waha-sessions:/app/.sessions
+
+  baresip:
+    build: ./deploy/baresip
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./deploy/baresip/config:/config:ro
+
+  doorbell:
+    build: ./services/doorbell
+    restart: unless-stopped
+    network_mode: host
+    env_file: ${DOORBELL_ENV_FILE:-.env}
+    depends_on:
+      - mosquitto
+      - waha
+      - baresip
+
+volumes:
+  mosquitto-data:
+  waha-sessions:
