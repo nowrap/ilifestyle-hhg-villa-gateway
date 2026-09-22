@@ -1,0 +1,13 @@
+# Replace 192.0.2.20 with the Docker host LAN address.
+sip_listen             192.0.2.20:5070
+call_max_calls         1
+audio_player           aubridge,nil
+audio_source           aubridge,nil
+audio_alert            aubridge,nil
+module_path            /usr/lib/baresip/modules
+module                 account.so
+module                 menu.so
+module                 g711.so
+module                 aubridge.so
+module                 ctrl_tcp.so
+ctrl_tcp_listen        127.0.0.1:4444

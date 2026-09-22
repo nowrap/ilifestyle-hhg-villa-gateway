@@ -3,6 +3,9 @@
  * ioBroker JavaScript adapter for HHG Villa GW AV-Link Gateway (AVL20P)
  * via iLifestyle Cloud MQTT
  *
+ * LEGACY EXPERIMENT: the assumed MQTT ring event is unconfirmed. This script
+ * observes cloud traffic only and contains no supported door-opening workflow.
+ *
  * Install in ioBroker: Scripts → JavaScript → New Script → paste this file
  * Requires: ioBroker javascript adapter + mqtt adapter
  *           OR node-red with mqtt node
@@ -11,11 +14,11 @@
  */
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const AVL_IP       = '192.168.0.14';   // IP of your AVL20P gateway
+const AVL_IP       = '192.0.2.10';     // replace with your AVL20P address
 const AVL_USER     = 'admin';           // Gateway web UI username
-const AVL_PASS     = 'admin';           // Gateway web UI password
+const AVL_PASS     = 'CHANGE_ME';       // Gateway web UI password
 const MQTT_HOST    = 'de.ilifestyle-cloud.com';
-const MQTT_PORT    = 1883;
+const MQTT_PORT    = 8883;
 const DOORBELL_RESET_MS = 5000;        // ms until doorbell state resets to false
 const TOKEN_REFRESH_MS  = 3600000;     // refresh token every 60 minutes
 // ──────────────────────────────────────────────────────────────────────────────
@@ -32,7 +35,6 @@ let tokenTimer  = null;
 createState('ilifestyle.connected',     false, { type: 'boolean', role: 'indicator.connected', read: true,  write: false, desc: 'MQTT connection state' });
 createState('ilifestyle.doorbell',      false, { type: 'boolean', role: 'button',              read: true,  write: false, desc: 'Doorbell triggered' });
 createState('ilifestyle.camera_active', false, { type: 'boolean', role: 'indicator',           read: true,  write: false, desc: 'Camera stream active' });
-createState('ilifestyle.open_door',     false, { type: 'boolean', role: 'button',              read: true,  write: true,  desc: 'Set true to open door' });
 createState('ilifestyle.rtmp_url',      '',    { type: 'string',  role: 'url',                 read: true,  write: false, desc: 'RTMP stream URL' });
 createState('ilifestyle.last_event',    '',    { type: 'string',  role: 'text',                read: true,  write: false, desc: 'Last raw MQTT payload' });
 
@@ -113,7 +115,7 @@ function connectMqtt() {
 
     log(`iLifestyle: connecting to ${MQTT_HOST}:${MQTT_PORT}...`);
 
-    mqttClient = mqtt.connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, {
+    mqttClient = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
         clientId:  `ioBroker|${deviceId}`,
         username:  deviceId,
         password:  cloudToken,
@@ -169,20 +171,6 @@ function handleMessage(topic, payload) {
         setState('javascript.0.ilifestyle.camera_active', active, true);
     }
 }
-
-// ─── Door Open Trigger ────────────────────────────────────────────────────────
-on({ id: 'javascript.0.ilifestyle.open_door', change: 'any' }, (obj) => {
-    if (obj.state && obj.state.val === true) {
-        log('iLifestyle: opening door...');
-        if (mqttClient && mqttClient.connected) {
-            mqttClient.publish(deviceId, JSON.stringify({ action: 'OPEN DOOR' }));
-            log('iLifestyle: door open command sent');
-        } else {
-            log('iLifestyle: MQTT not connected, cannot open door', 'warn');
-        }
-        setTimeout(() => setState('javascript.0.ilifestyle.open_door', false, true), 1000);
-    }
-});
 
 // ─── Token Refresh ────────────────────────────────────────────────────────────
 async function refreshAndConnect() {
