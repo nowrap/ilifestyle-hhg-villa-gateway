@@ -56,12 +56,15 @@ image through local RTSP. It sends one MQTT door command only after Baresip has
 accepted the same call. Existing ioBroker datapoints and automations are not
 migrated automatically.
 
-There is no ready-to-use Compose deployment yet. Follow `docs/setup.md` and keep
-door opening disabled until the complete path works with your hardware.
+An example Compose deployment and a complete installation procedure are in
+[`docs/setup.md`](docs/setup.md). Keep door opening disabled until the complete
+path works with your hardware.
 
 ## Installation
 
-The reusable deployment is still being converted from a working private setup. Start with [docs/setup.md](docs/setup.md). Do not enable the door actuator until the SIP, MQTT and authorization checks have been validated with your hardware.
+Start with [docs/setup.md](docs/setup.md). It covers configuration, startup,
+staged testing and troubleshooting. Do not enable the door actuator until the
+SIP, MQTT, RTSP and authorization checks have been validated with your hardware.
 
 ## Scope and licensing
 
