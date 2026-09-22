@@ -1,0 +1,18 @@
+{
+  "name": "ilifestyle-doorbell-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental local HHG Villa doorbell notification and unlock service",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/doorbell-notifier.js",
+    "check": "node --check src/doorbell-notifier.js && node --check src/baresip-control.js && node --check src/call-registry.js && node --check src/safety.js && node --check src/unlock-workflow.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mqtt": "^5.16.0"
+  }
+}

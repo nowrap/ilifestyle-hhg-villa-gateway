@@ -1,0 +1,2 @@
+# Replace the addresses with values appropriate for your LAN.
+<sip:bus1@192.0.2.20:5070>;regint=0;answermode=manual;dtmfmode=auto

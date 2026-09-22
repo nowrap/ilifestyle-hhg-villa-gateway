@@ -1,0 +1,9 @@
+# Replace YOUR_DEVICE_ID before use.
+user YOUR_DEVICE_ID
+topic read YOUR_DEVICE_ID
+topic read YOUR_DEVICE_ID/#
+
+user doorbell-notifier
+topic write YOUR_DEVICE_ID
+topic write YOUR_DEVICE_ID/#
+topic read $SYS/broker/clients/connected

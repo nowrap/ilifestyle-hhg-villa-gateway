@@ -2,16 +2,18 @@
 # ilifestyle-mqtt.sh
 # Connects to the iLifestyle Cloud MQTT broker for HHG Villa GW AV-Link Gateway (AVL20P)
 # Fetches a fresh token from the local gateway API and subscribes to doorbell events.
+# LEGACY EXPERIMENT: the assumed MQTT ring event is unconfirmed. This script
+# observes cloud traffic only and contains no supported door-opening workflow.
 #
 # Usage: ./ilifestyle-mqtt.sh
 # Requirements: mosquitto-clients, curl, python3
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-AVL_IP="192.168.0.14"       # IP address of your AVL20P gateway
+AVL_IP="192.0.2.10"         # replace with your AVL20P address
 AVL_USER="admin"             # Gateway web UI username
-AVL_PASS="admin"             # Gateway web UI password
+AVL_PASS="CHANGE_ME"         # Gateway web UI password
 MQTT_HOST="de.ilifestyle-cloud.com"
-MQTT_PORT="1883"
+MQTT_PORT="8883"
 CLIENT_ID_PREFIX="ioBroker"
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,7 @@ echo ""
 mosquitto_sub \
   -h "$MQTT_HOST" \
   -p "$MQTT_PORT" \
+  --tls-use-os-certs \
   -u "$DEVICE_ID" \
   -P "$CLOUD_TOKEN" \
   -i "$CLIENT_ID_PREFIX|$DEVICE_ID" \
