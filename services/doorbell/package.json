@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/doorbell-notifier.js",
-    "check": "node --check src/doorbell-notifier.js && node --check src/baresip-control.js && node --check src/call-registry.js && node --check src/safety.js && node --check src/unlock-workflow.js",
+    "check": "node --check src/doorbell-notifier.js && node --check src/baresip-control.js && node --check src/call-registry.js && node --check src/safety.js && node --check src/unlock-workflow.js && node --check src/snapshot.js",
     "test": "node --test"
   },
   "engines": {

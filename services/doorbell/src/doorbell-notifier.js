@@ -2,12 +2,12 @@
 
 const fs = require('node:fs/promises');
 const http = require('node:http');
-const { spawn } = require('node:child_process');
 const mqtt = require('mqtt');
 const { BaresipControl } = require('./baresip-control');
 const { CallRegistry, parseActiveCallCount, inventoryResponseIsCurrent } = require('./call-registry');
 const { safeSnapshotPath, secretsEqual } = require('./safety');
 const { executeConfirmedUnlock } = require('./unlock-workflow');
+const { captureStableSnapshot } = require('./snapshot');
 
 const listenPort = Number(process.env.NOTIFIER_PORT || 3000);
 const webhookSecret = process.env.WEBHOOK_SECRET || '';
@@ -30,9 +30,14 @@ const unlockAllowWholeGroup = process.env.UNLOCK_ALLOW_WHOLE_GROUP === 'true';
 const unlockAllowedParticipants = new Set(
   (process.env.UNLOCK_ALLOWED_PARTICIPANTS || '').split(',').map((value) => value.trim()).filter(Boolean),
 );
-const minImageBytes = Number(process.env.MIN_IMAGE_BYTES || 8000);
-const maxCaptureAttempts = Number(process.env.MAX_CAPTURE_ATTEMPTS || 5);
+const maxCaptureAttempts = Number(process.env.MAX_CAPTURE_ATTEMPTS || 2);
 const captureRetryMs = Number(process.env.CAPTURE_RETRY_MS || 250);
+const snapshotOptions = {
+  maxWaitMs: Number(process.env.SNAPSHOT_MAX_WAIT_MS || 4000),
+  stableMs: Number(process.env.SNAPSHOT_STABLE_MS || 500),
+  cropRight: Number(process.env.SNAPSHOT_CROP_RIGHT || 10),
+  enhance: process.env.SNAPSHOT_ENHANCE !== 'false',
+};
 
 for (const [name, value] of Object.entries({
   RTSP_URL: rtspUrl,
@@ -162,37 +167,14 @@ baresip.on('callEvent', (event) => {
 });
 baresip.start();
 
-function captureSnapshot(path) {
-  return new Promise((resolve, reject) => {
-    const ffmpeg = spawn('ffmpeg', [
-      '-hide_banner', '-loglevel', 'error', '-rtsp_transport', 'tcp',
-      '-i', rtspUrl, '-frames:v', '1', '-update', '1', '-q:v', '2', '-y', path,
-    ], { stdio: ['ignore', 'ignore', 'pipe'] });
-    let stderr = '';
-    const timer = setTimeout(() => ffmpeg.kill('SIGKILL'), 5000);
-    ffmpeg.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
-    ffmpeg.on('error', reject);
-    ffmpeg.on('close', async (code, signal) => {
-      clearTimeout(timer);
-      if (code !== 0) return reject(new Error(`ffmpeg ${signal || code}: ${stderr.slice(-300)}`));
-      try {
-        const stat = await fs.stat(path);
-        resolve(stat.size);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
-
 async function captureUsableSnapshot(path) {
   let lastError;
   for (let attempt = 1; attempt <= maxCaptureAttempts; attempt += 1) {
     try {
-      const bytes = await captureSnapshot(path);
-      log({ event: 'snapshot_attempt', attempt, bytes });
-      if (bytes >= minImageBytes) return bytes;
-      lastError = new Error(`image too small: ${bytes} bytes`);
+      const result = await captureStableSnapshot({ url: rtspUrl, path, options: snapshotOptions });
+      const { size: bytes } = await fs.stat(path);
+      log({ event: 'snapshot_attempt', attempt, bytes, ...result });
+      return bytes;
     } catch (error) {
       lastError = error;
       log({ event: 'snapshot_attempt_failed', attempt, error: error.message });
