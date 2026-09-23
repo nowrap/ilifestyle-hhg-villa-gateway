@@ -127,9 +127,12 @@ UNLOCK_ALLOWED_PARTICIPANTS=
 UNLOCK_ALLOW_WHOLE_GROUP=false
 UNLOCK_WINDOW_MS=120000
 
-MIN_IMAGE_BYTES=8000
-MAX_CAPTURE_ATTEMPTS=5
+MAX_CAPTURE_ATTEMPTS=2
 CAPTURE_RETRY_MS=250
+SNAPSHOT_MAX_WAIT_MS=4000
+SNAPSHOT_STABLE_MS=500
+SNAPSHOT_CROP_RIGHT=10
+SNAPSHOT_ENHANCE=true
 ```
 
 Generate secrets, for example, with:
@@ -273,6 +276,24 @@ acceptance tests for each installation.
 - Run FFmpeg against `RTSP_URL` from the Docker host.
 - Look for `snapshot_attempt_failed` and `doorbell_image_failed` in the
   doorbell logs.
+- `no usable frame within 4000 ms` means the stream stayed on the blue
+  no-signal screen, froze or never settled. Check that the door camera is
+  switched on during the call.
+
+### Snapshot quality
+
+The notifier does not use the first decodable frame. On the tested AVL20P the
+camera needs about 1–3 s after the button press: the gateway first streams a
+blue no-signal screen, then pauses, then emits torn or overexposed frames. The
+service reads raw frames until the mean luma has been stable for
+`SNAPSHOT_STABLE_MS` without gaps or blue frames, stops the RTSP session and
+encodes only that frame. It gives up after `SNAPSHOT_MAX_WAIT_MS`.
+
+`SNAPSHOT_ENHANCE=true` applies an adaptive tone curve only to hazy, backlit
+pictures (10th luma percentile above 30) plus slight sharpening; normally
+exposed pictures keep their tonality. `SNAPSHOT_CROP_RIGHT` removes the black
+border added by the analog video decoder. Each `snapshot_attempt` log entry
+contains the waiting time, frame count, measured black level and applied curve.
 
 ### No incoming SIP call
 
