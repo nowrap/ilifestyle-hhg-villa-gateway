@@ -312,7 +312,31 @@ endpoint before `gatewayMqttProbablyPresent` can become true.
 
 - Confirm `UNLOCK_ENABLED=true` and the participant allow-list.
 - Confirm the bot's response in WhatsApp; it states why a request was rejected.
+  If there is no response at all, see the next section instead.
 - Confirm that the gateway is connected to the local broker with permission to
   read its device topic.
 - Confirm that Baresip accepted the same Call-ID before MQTT was published.
 - Do not retry a failed operation automatically.
+
+### The reply is not answered at all
+
+Every rejection path answers in the chat ("⛔ not authorised", "⌛ older than two
+minutes", …). **Silence therefore means the notifier never saw the message**, and
+the fault is in webhook delivery rather than in the unlock logic. The doorbell
+image still arrives in this state, because that path is outgoing only.
+
+- Verify the hook on the running container:
+  `docker exec waha env | grep WHATSAPP_HOOK`.
+- Do **not** verify with `GET /api/sessions/<name>`. It reports `"webhooks": []`
+  even while a working hook is configured, because it lists per-session hooks
+  only; a `WHATSAPP_HOOK_URL` applies container-wide and never appears there.
+- WAHA's sample `.env` ships `WHATSAPP_HOOK_URL`, `WHATSAPP_HOOK_EVENTS` and
+  `WHATSAPP_HOOK_CUSTOM_HEADERS` commented out with placeholder values. Grepping
+  the file finds three hits and suggests they are configured; they are not.
+- Confirm that WAHA can reach the notifier over a shared Docker network:
+  `docker exec waha wget -qO- http://<notifier>:3000/health`.
+- `WAHA_WEBHOOK_SECRET` must be identical on both sides. A mismatch is answered
+  with HTTP 403 by the notifier and likewise produces no chat message.
+- The notifier log distinguishes the two cases: a delivered but rejected request
+  logs `unlock_ignored_wrong_context` or `unlock_rejected_invalid_webhook`,
+  whereas undelivered replies leave no entry at all.
