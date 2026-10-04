@@ -308,6 +308,89 @@ Inspect the JSON response from `/health`. It reports WAHA, Baresip, MQTT and
 broker-client state separately. The gateway must connect to the local MQTT
 endpoint before `gatewayMqttProbablyPresent` can become true.
 
+
+### Every MQTT client is rejected with CONNACK 5
+
+Mosquitto logs `Client <id> disconnected: not authorised.` and the gateway logs
+`mqtt connect error 5`. Two different faults produce exactly this, and they are
+not distinguishable from the gateway side:
+
+1. The password in the Mosquitto password file does not match what the gateway
+   sends.
+2. **The broker cannot read its own password file.** With
+   `allow_anonymous false` and an unreadable password file, Mosquitto rejects
+   *every* client with return code 5.
+
+Check the second one first, because it is cheap and because it is easy to cause
+by accident:
+
+```sh
+docker compose logs mosquitto | grep pwfile
+```
+
+`password-file: Error: Unable to open pwfile` means the file is not readable by
+the user Mosquitto runs as. In the official `eclipse-mosquitto` image that is
+UID 1883, not root and not your login account.
+
+This failure is delayed and therefore misleading. The running process keeps
+working from the file it already has open, so changing the owner or mode has no
+visible effect until the next restart — which may be hours or days later, long
+after the change that caused it. A second symptom settles it immediately: if
+the notifier is rejected as well, the problem is the file, not the gateway
+credential.
+
+### The gateway stops using the local endpoints
+
+The doorbell still rings at the indoor stations, but image, WhatsApp message and
+door release stop working. Several checks fail at the same time: `/health`
+reports `degraded` because `gatewayMqttProbablyPresent` drops to false, and — if
+you monitor them — SIP traffic to the local endpoint stops and the gateway's
+configured targets no longer point at your host. (The tested installation runs
+such additional monitors; they are not part of this repository.) This is one
+fault, not several: the gateway is no longer pointed at the local services. The
+indoor call path does not depend on them.
+
+On the tested AVL20P this happened **after a reboot**. The gateway fetches its
+configuration from the vendor cloud while booting and writes it to its own
+database, overwriting locally set values. Nobody had to touch the vendor app or
+its web interface for this.
+
+Two timestamps on the gateway make the cause likely rather than guessed:
+
+```sh
+uptime                                  # when did it boot?
+ls -l /customer/share/avl20.db          # when was the configuration written?
+```
+
+If they fall in the same minute, the boot most likely wrote the configuration.
+This is a strong indication, not proof.
+
+After restoring the local targets, a configuration reload is enough; the MQTT
+client picks the new endpoint up without a process or device restart. **Do not
+reboot to make the change take effect** — the boot would fetch the vendor
+configuration again and undo it.
+
+Expect the MQTT credential to have changed as well. On the tested device the
+password the gateway presents after such a round trip differed from the one it
+had used before, while the token stored in its own database was unchanged. The
+previously working password file entry was therefore rejected. This repository
+does not provide a way to obtain the new credential; see the prerequisites in
+section 1.
+
+#### Alert on it, do not just display it
+
+A reboot can happen at any time — a power cut is enough — and the indoor
+stations keep ringing, so nobody notices from the doorbell. In the tested
+installation the gateway stayed on the vendor cloud for five days before the
+fault was noticed, although the status page showed it the whole time. Send an
+alert instead of relying on someone to look:
+
+- alert when `/health` stays `degraded` for more than a few minutes, through a
+  channel you actually read (the same WhatsApp group works);
+- send one test alert after setting it up, so you know the path works;
+- send an all-clear only once the gateway is back on the broker, not as soon as
+  the targets are restored — the new credential may still be missing.
+
 ### Image arrives but the door does not open
 
 - Confirm `UNLOCK_ENABLED=true` and the participant allow-list.
